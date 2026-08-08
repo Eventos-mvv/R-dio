@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Painel de Rádios — MVV</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rádios MVV">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<style>
+  :root{
+    --bg-deep:#0b1220;
+    --bg-glass:rgba(255,255,255,0.06);
+    --border-glass:rgba(255,255,255,0.12);
+    --accent:#5b8cff;
+    --accent-2:#2ee6a8;
+    --free:#1e8f5f;
+    --free-bg:rgba(46,230,168,0.10);
+    --used:#e2483d;
+    --used-bg:rgba(226,72,61,0.12);
+    --maint:#f2b134;
+    --maint-bg:rgba(242,177,52,0.12);
+    --text:#f2f4f8;
+    --text-dim:#9aa4b8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(91,140,255,0.25), transparent 45%),
+      radial-gradient(circle at 85% 100%, rgba(46,230,168,0.15), transparent 45%),
+      var(--bg-deep);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding-bottom:40px;
+  }
+  header{
+    padding:22px 16px 14px;
+    text-align:center;
+    position:sticky;
+    top:0;
+    z-index:20;
+    background:rgba(11,18,32,0.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border-glass);
+  }
+  header h1{
+    margin:0;
+    font-size:1.3rem;
+    letter-spacing:0.3px;
+  }
+  header .sub{
+    color:var(--text-dim);
+    font-size:0.8rem;
+    margin-top:2px;
+  }
+  .stats{
+    display:flex;
+    justify-content:center;
+    gap:18px;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+  .stat{
+    background:var(--bg-glass);
+    border:1px solid var(--border-glass);
+    border-radius:12px;
+    padding:6px 14px;
+    font-size:0.78rem;
+    color:var(--text-dim);
+  }
+  .stat b{color:var(--text);font-size:0.95rem;}
+  .stat.free b{color:var(--accent-2);}
+  .stat.used b{color:var(--used);}
+
+  .toolbar{
+    max-width:900px;
+    margin:16px auto 0;
+    padding:0 16px;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .toolbar input[type=text]{
+    flex:1;
+    min-width:160px;
+    background:var(--bg-glass);
+    border:1px solid var(--border-glass);
+    border-radius:10px;
+    padding:10px 12px;
+    color:var(--text);
+    font-size:0.9rem;
+  }
+  .toolbar input::placeholder{color:var(--text-dim);}
+  .op-pill{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:var(--bg-glass);
+    border:1px solid var(--border-glass);
+    border-radius:10px;
+    padding:6px 10px;
+    font-size:0.78rem;
+    color:var(--text-dim);
+    cursor:pointer;
+  }
+  .op-pill b{color:var(--accent-2);font-weight:600;}
+
+  .grid{
+    max-width:900px;
+    margin:16px auto;
+    padding:0 16px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(130px,1fr));
+    gap:10px;
+  }
+  .card{
+    border-radius:14px;
+    padding:12px 10px;
+    border:1px solid var(--border-glass);
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+    min-height:92px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    position:relative;
+    overflow:hidden;
+  }
+  .card:active{transform:scale(0.96);}
+  .card.free{background:var(--free-bg);border-color:rgba(46,230,168,0.35);}
+  .card.used{background:var(--used-bg);border-color:rgba(226,72,61,0.4);}
+  .card.maint{background:var(--maint-bg);border-color:rgba(242,177,52,0.45);}
+  .card .radio-icon{
+    width:26px;height:26px;
+    margin-bottom:2px;
+  }
+  .card .radio-icon svg{width:100%;height:100%;display:block;}
+  .card.free .radio-icon svg{stroke:var(--accent-2);}
+  .card.used .radio-icon svg{stroke:#ff9a91;}
+  .card.maint .radio-icon svg{stroke:var(--maint);}
+
+  .card .num{
+    font-size:1.5rem;
+    font-weight:700;
+    line-height:1;
+  }
+  .card.free .num{color:var(--accent-2);}
+  .card.used .num{color:#ff9a91;}
+  .card.maint .num{color:var(--maint);}
+  .card .label{
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:var(--text-dim);
+    margin-top:4px;
+  }
+  .card .who{
+    font-size:0.85rem;
+    font-weight:600;
+    margin-top:6px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .card .dot{
+    position:absolute;
+    top:10px;
+    right:10px;
+    width:8px;height:8px;
+    border-radius:50%;
+  }
+  .card.free .dot{background:var(--accent-2);box-shadow:0 0 8px var(--accent-2);}
+  .card.used .dot{background:var(--used);box-shadow:0 0 8px var(--used);}
+  .card.maint .dot{background:var(--maint);box-shadow:0 0 8px var(--maint);}
+
+  .reason-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .reason-btn{
+    flex:1;min-width:110px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--border-glass);
+    border-radius:10px;
+    padding:10px 8px;
+    color:var(--text-dim);
+    font-size:0.78rem;
+    cursor:pointer;
+    text-align:center;
+  }
+  .reason-btn.selected{
+    background:rgba(242,177,52,0.15);
+    border-color:var(--maint);
+    color:var(--maint);
+    font-weight:600;
+  }
+  select#targetRadio{
+    width:100%;
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--border-glass);
+    border-radius:10px;
+    padding:12px;
+    color:var(--text);
+    font-size:1rem;
+  }
+  .btn-warn{background:rgba(242,177,52,0.18);color:var(--maint);border:1px solid rgba(242,177,52,0.45);}
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.55);
+    backdrop-filter:blur(3px);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:100;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    width:100%;
+    max-width:480px;
+    background:#131b2e;
+    border:1px solid var(--border-glass);
+    border-top-left-radius:20px;
+    border-top-right-radius:20px;
+    padding:22px 20px 28px;
+    animation:slideUp .18s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .modal h2{margin:0 0 4px;font-size:1.15rem;}
+  .modal .meta{color:var(--text-dim);font-size:0.8rem;margin-bottom:16px;}
+  .modal label{
+    display:block;
+    font-size:0.75rem;
+    color:var(--text-dim);
+    margin-bottom:6px;
+    margin-top:14px;
+  }
+  .modal input[type=text]{
+    width:100%;
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--border-glass);
+    border-radius:10px;
+    padding:12px;
+    color:var(--text);
+    font-size:1rem;
+  }
+  .modal .history{
+    margin-top:14px;
+    font-size:0.75rem;
+    color:var(--text-dim);
+    background:rgba(255,255,255,0.03);
+    padding:10px;
+    border-radius:10px;
+  }
+  .btn-row{
+    display:flex;
+    gap:10px;
+    margin-top:20px;
+  }
+  .btn{
+    flex:1;
+    border:none;
+    border-radius:12px;
+    padding:14px;
+    font-size:0.95rem;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .btn-primary{background:linear-gradient(135deg,var(--accent),#3f6fe0);color:white;}
+  .btn-danger{background:rgba(226,72,61,0.15);color:#ff9a91;border:1px solid rgba(226,72,61,0.4);}
+  .btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border-glass);}
+
+  .conn{
+    position:fixed;
+    bottom:14px;left:50%;
+    transform:translateX(-50%);
+    font-size:0.7rem;
+    padding:5px 12px;
+    border-radius:20px;
+    background:rgba(255,255,255,0.08);
+    color:var(--text-dim);
+    z-index:50;
+    display:flex;align-items:center;gap:6px;
+  }
+  .conn .dot{width:6px;height:6px;border-radius:50%;background:#666;}
+  .conn.online .dot{background:var(--accent-2);}
+  .conn.offline .dot{background:var(--used);}
+
+  #setupBox{
+    max-width:600px;
+    margin:60px auto;
+    padding:24px;
+    background:var(--bg-glass);
+    border:1px solid var(--border-glass);
+    border-radius:16px;
+  }
+  #setupBox h2{margin-top:0;}
+  #setupBox textarea{
+    width:100%;
+    min-height:140px;
+    background:rgba(0,0,0,0.3);
+    color:var(--text);
+    border:1px solid var(--border-glass);
+    border-radius:10px;
+    padding:12px;
+    font-family:monospace;
+    font-size:0.8rem;
+  }
+  #setupBox p{color:var(--text-dim);font-size:0.85rem;line-height:1.5;}
+  #setupBox a{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<div id="setupBox" style="display:none;">
+  <h2>⚙️ Configuração necessária (só na primeira vez)</h2>
+  <p>Este painel usa o <b>Firebase Realtime Database</b> para sincronizar entre celulares em tempo real. Cole abaixo o <b>firebaseConfig</b> do seu projeto (Console Firebase → Configurações do projeto → seus apps → SDK setup and configuration).</p>
+  <p>Se você já tem um projeto Firebase de outro painel (ex: SETORES), pode reaproveitar o mesmo — só use uma chave nova no banco, tipo <code>/radios25</code>, pra não misturar os dados.</p>
+  <textarea id="configInput" placeholder='{
+  "apiKey": "...",
+  "authDomain": "...",
+  "databaseURL": "https://SEU-PROJETO-default-rtdb.firebaseio.com",
+  "projectId": "...",
+  ...
+}'></textarea>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="saveConfig()">Salvar e continuar</button>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <h1>📻 Painel de Rádios</h1>
+    <div class="sub">Toque em um rádio para atribuir ou liberar</div>
+    <div class="stats">
+      <div class="stat free">Livres <b id="statFree">–</b></div>
+      <div class="stat used">Em uso <b id="statUsed">–</b></div>
+      <div class="stat" style="border-color:rgba(242,177,52,0.35);">Manutenção <b id="statMaint" style="color:var(--maint);">–</b></div>
+      <div class="stat">Total <b>25</b></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Buscar por nome da pessoa...">
+    <div class="op-pill" onclick="promptOperator()">Operador: <b id="opName">definir</b></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+
+    <div id="mainScreen">
+      <h2 id="modalTitle">Rádio 1</h2>
+      <div class="meta" id="modalMeta">Livre</div>
+
+      <input type="text" id="personInput" placeholder="Ex: João Silva" autocomplete="off" style="display:none;">
+      <div id="personLabelWrap" style="display:none;">
+        <label>Nome da pessoa</label>
+      </div>
+
+      <div class="history" id="historyBox" style="display:none;"></div>
+
+      <div class="btn-row" id="mainBtnRow">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-danger" id="releaseBtn" onclick="releaseRadio()" style="display:none;">Liberar</button>
+        <button class="btn btn-primary" id="assignBtn" onclick="assignRadio()">Atribuir</button>
+      </div>
+
+      <div class="btn-row" id="issueBtnRow" style="display:none;">
+        <button class="btn btn-warn" onclick="openIssueScreen()">⚠️ Registrar problema / trocar rádio</button>
+      </div>
+
+      <div class="btn-row" id="fixBtnRow" style="display:none;">
+        <button class="btn btn-primary" onclick="resolveIssue()">✅ Voltar a ficar livre</button>
+      </div>
+    </div>
+
+    <div id="issueScreen" style="display:none;">
+      <h2>Registrar problema — Rádio <span id="issueRadioNum"></span></h2>
+      <div class="meta">Escolha o motivo e o rádio substituto</div>
+
+      <label>Motivo</label>
+      <div class="reason-row">
+        <div class="reason-btn" data-reason="Bateria fraca" onclick="selectReason(this)">🔋 Bateria fraca</div>
+        <div class="reason-btn" data-reason="Defeito / mau funcionamento" onclick="selectReason(this)">⚠️ Defeito</div>
+        <div class="reason-btn" data-reason="Outro motivo" onclick="selectReason(this)">✏️ Outro</div>
+      </div>
+
+      <label>Rádio substituto (livre)</label>
+      <select id="targetRadio"></select>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="closeIssueScreen()">Voltar</button>
+        <button class="btn btn-warn" onclick="confirmSwap()">Confirmar troca</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="conn offline" id="connStatus"><div class="dot"></div><span>conectando...</span></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const TOTAL_RADIOS = 25;
+const DB_PATH = "radios25";
+const RADIO_ICON_SVG = `
+<svg viewBox="0 0 48 48" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+  <line x1="19" y1="6" x2="19" y2="11"/>
+  <circle cx="19" cy="4" r="1.6" fill="currentColor" stroke="none"/>
+  <rect x="13" y="11" width="20" height="30" rx="3"/>
+  <rect x="17" y="16" width="12" height="8" rx="1.2"/>
+  <line x1="17" y1="29" x2="29" y2="29"/>
+  <line x1="17" y1="33" x2="25" y2="33"/>
+  <rect x="30" y="15" width="4" height="6" rx="1"/>
+</svg>`;
+let db, radiosRef;
+let currentRadioSelected = null;
+let radiosData = {};
+
+// ---------- Config handling ----------
+function getStoredConfig(){
+  const raw = localStorage.getItem("mvv_firebase_config");
+  return raw ? JSON.parse(raw) : null;
+}
+
+function saveConfig(){
+  const raw = document.getElementById("configInput").value.trim();
+  try{
+    // Allow pasting JS object (with unquoted keys) or pure JSON
+    const cleaned = raw.replace(/^const\s+\w+\s*=\s*/,'').replace(/;\s*$/,'');
+    const fn = new Function("return " + cleaned);
+    const cfg = fn();
+    if(!cfg.databaseURL){
+      alert("Esse config não tem databaseURL. Confirme que o Realtime Database está ativado no seu projeto Firebase.");
+      return;
+    }
+    localStorage.setItem("mvv_firebase_config", JSON.stringify(cfg));
+    location.reload();
+  }catch(e){
+    alert("Não consegui ler esse config. Cole exatamente o objeto firebaseConfig do Firebase.");
+  }
+}
+
+function init(){
+  const cfg = getStoredConfig();
+  if(!cfg){
+    document.getElementById("setupBox").style.display = "block";
+    return;
+  }
+  document.getElementById("app").style.display = "block";
+
+  firebase.initializeApp(cfg);
+  db = firebase.database();
+  radiosRef = db.ref(DB_PATH);
+
+  db.ref(".info/connected").on("value", (snap)=>{
+    const el = document.getElementById("connStatus");
+    if(snap.val() === true){
+      el.className = "conn online";
+      el.querySelector("span").textContent = "sincronizado em tempo real";
+    }else{
+      el.className = "conn offline";
+      el.querySelector("span").textContent = "reconectando...";
+    }
+  });
+
+  radiosRef.on("value", (snap)=>{
+    radiosData = snap.val() || {};
+    renderGrid();
+  });
+
+  buildEmptyGridIfNeeded();
+
+  const savedOp = localStorage.getItem("mvv_operator_name");
+  if(savedOp) document.getElementById("opName").textContent = savedOp;
+
+  document.getElementById("searchInput").addEventListener("input", renderGrid);
+}
+
+function buildEmptyGridIfNeeded(){
+  radiosRef.once("value", (snap)=>{
+    if(!snap.exists()){
+      const initial = {};
+      for(let i=1;i<=TOTAL_RADIOS;i++){
+        initial[i] = { status:"free", person:null, operator:null, timestamp:null };
+      }
+      radiosRef.set(initial);
+    }
+  });
+}
+
+// ---------- Operator ----------
+function promptOperator(){
+  const name = prompt("Seu nome (aparece como operador nas atribuições):", localStorage.getItem("mvv_operator_name") || "");
+  if(name && name.trim()){
+    localStorage.setItem("mvv_operator_name", name.trim());
+    document.getElementById("opName").textContent = name.trim();
+  }
+}
+
+// ---------- Render ----------
+function renderGrid(){
+  const grid = document.getElementById("grid");
+  const query = (document.getElementById("searchInput").value || "").toLowerCase().trim();
+  grid.innerHTML = "";
+  let freeCount = 0, usedCount = 0, maintCount = 0;
+
+  for(let i=1;i<=TOTAL_RADIOS;i++){
+    const r = radiosData[i] || {status:"free"};
+    const status = r.status || "free";
+    if(status === "free") freeCount++;
+    else if(status === "used") usedCount++;
+    else if(status === "maintenance") maintCount++;
+
+    if(query){
+      const matches = status === "used" && r.person && r.person.toLowerCase().includes(query);
+      if(!matches) continue;
+    }
+
+    const labelMap = { free:"livre", used:"em uso", maintenance:"manutenção" };
+    const classMap = { free:"free", used:"used", maintenance:"maint" };
+
+    const card = document.createElement("div");
+    card.className = "card " + classMap[status];
+    card.onclick = () => openModal(i);
+    card.innerHTML = `
+      <div class="dot"></div>
+      <div class="radio-icon">${RADIO_ICON_SVG}</div>
+      <div class="num">${i}</div>
+      <div>
+        <div class="label">${labelMap[status]}</div>
+        ${status === "used" ? `<div class="who">${escapeHtml(r.person||"")}</div>` : ""}
+        ${status === "maintenance" ? `<div class="who">${escapeHtml(r.note||"")}</div>` : ""}
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+
+  document.getElementById("statFree").textContent = freeCount;
+  document.getElementById("statUsed").textContent = usedCount;
+  document.getElementById("statMaint").textContent = maintCount;
+}
+
+function escapeHtml(str){
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ---------- Modal ----------
+let selectedReason = null;
+
+function openModal(num){
+  currentRadioSelected = num;
+  const r = radiosData[num] || {status:"free"};
+  const status = r.status || "free";
+
+  document.getElementById("mainScreen").style.display = "block";
+  document.getElementById("issueScreen").style.display = "none";
+  document.getElementById("modalTitle").textContent = "Rádio " + num;
+
+  const personInput = document.getElementById("personInput");
+  const personLabelWrap = document.getElementById("personLabelWrap");
+  const releaseBtn = document.getElementById("releaseBtn");
+  const assignBtn = document.getElementById("assignBtn");
+  const issueBtnRow = document.getElementById("issueBtnRow");
+  const fixBtnRow = document.getElementById("fixBtnRow");
+  const historyBox = document.getElementById("historyBox");
+
+  if(status === "free"){
+    document.getElementById("modalMeta").textContent = "Livre — disponível para atribuir";
+    personInput.style.display = "block";
+    personLabelWrap.style.display = "block";
+    personInput.value = "";
+    assignBtn.style.display = "block";
+    releaseBtn.style.display = "none";
+    issueBtnRow.style.display = "none";
+    fixBtnRow.style.display = "none";
+    historyBox.style.display = "none";
+  } else if(status === "used"){
+    document.getElementById("modalMeta").textContent = `Em uso desde ${formatTime(r.timestamp)}`;
+    personInput.style.display = "block";
+    personLabelWrap.style.display = "block";
+    personInput.value = r.person || "";
+    assignBtn.style.display = "block";
+    releaseBtn.style.display = "block";
+    issueBtnRow.style.display = "block";
+    fixBtnRow.style.display = "none";
+    historyBox.style.display = "block";
+    historyBox.textContent = `Atribuído por ${r.operator || "—"}`;
+  } else if(status === "maintenance"){
+    document.getElementById("modalMeta").textContent = `Em manutenção desde ${formatTime(r.timestamp)}`;
+    personInput.style.display = "none";
+    personLabelWrap.style.display = "none";
+    assignBtn.style.display = "none";
+    releaseBtn.style.display = "none";
+    issueBtnRow.style.display = "none";
+    fixBtnRow.style.display = "block";
+    historyBox.style.display = "block";
+    historyBox.textContent = `Motivo: ${r.note || "—"} · Registrado por ${r.operator || "—"}`;
+  }
+
+  document.getElementById("overlay").classList.add("open");
+  setTimeout(()=>{ if(personInput.style.display !== "none") personInput.focus(); }, 150);
+}
+
+function closeModal(){
+  document.getElementById("overlay").classList.remove("open");
+  currentRadioSelected = null;
+  selectedReason = null;
+}
+
+function assignRadio(){
+  const name = document.getElementById("personInput").value.trim();
+  if(!name){
+    alert("Digita o nome da pessoa que vai ficar com o rádio.");
+    return;
+  }
+  const operator = localStorage.getItem("mvv_operator_name") || "não identificado";
+  radiosRef.child(currentRadioSelected).set({
+    status:"used",
+    person:name,
+    operator:operator,
+    timestamp: Date.now(),
+    note:null
+  });
+  closeModal();
+}
+
+function releaseRadio(){
+  radiosRef.child(currentRadioSelected).set({
+    status:"free",
+    person:null,
+    operator:null,
+    timestamp:null,
+    note:null
+  });
+  closeModal();
+}
+
+// ---------- Troca por problema (manutenção) ----------
+function openIssueScreen(){
+  selectedReason = null;
+  document.getElementById("mainScreen").style.display = "none";
+  document.getElementById("issueScreen").style.display = "block";
+  document.getElementById("issueRadioNum").textContent = currentRadioSelected;
+
+  document.querySelectorAll(".reason-btn").forEach(b => b.classList.remove("selected"));
+
+  const select = document.getElementById("targetRadio");
+  select.innerHTML = "";
+  const freeRadios = [];
+  for(let i=1;i<=TOTAL_RADIOS;i++){
+    if(i === currentRadioSelected) continue;
+    const status = (radiosData[i] && radiosData[i].status) || "free";
+    if(status === "free") freeRadios.push(i);
+  }
+  if(freeRadios.length === 0){
+    select.innerHTML = `<option value="">Nenhum rádio livre disponível</option>`;
+  }else{
+    freeRadios.forEach(n=>{
+      const opt = document.createElement("option");
+      opt.value = n;
+      opt.textContent = "Rádio " + n;
+      select.appendChild(opt);
+    });
+  }
+}
+
+function closeIssueScreen(){
+  document.getElementById("mainScreen").style.display = "block";
+  document.getElementById("issueScreen").style.display = "none";
+}
+
+function selectReason(el){
+  selectedReason = el.getAttribute("data-reason");
+  document.querySelectorAll(".reason-btn").forEach(b => b.classList.remove("selected"));
+  el.classList.add("selected");
+}
+
+function confirmSwap(){
+  if(!selectedReason){
+    alert("Escolhe o motivo da troca.");
+    return;
+  }
+  const targetSelect = document.getElementById("targetRadio");
+  const targetNum = targetSelect.value;
+  if(!targetNum){
+    alert("Não tem rádio livre pra transferir. Libera algum rádio primeiro ou marca esse como consertado depois.");
+    return;
+  }
+
+  const oldNum = currentRadioSelected;
+  const oldData = radiosData[oldNum] || {};
+  const operator = localStorage.getItem("mvv_operator_name") || "não identificado";
+  const person = oldData.person || null;
+
+  radiosRef.child(oldNum).set({
+    status:"maintenance",
+    person:null,
+    operator:operator,
+    timestamp: Date.now(),
+    note: selectedReason
+  });
+
+  radiosRef.child(targetNum).set({
+    status:"used",
+    person: person,
+    operator: operator,
+    timestamp: Date.now(),
+    note: `Trocado do rádio ${oldNum}`
+  });
+
+  closeModal();
+}
+
+function resolveIssue(){
+  radiosRef.child(currentRadioSelected).set({
+    status:"free",
+    person:null,
+    operator:null,
+    timestamp:null,
+    note:null
+  });
+  closeModal();
+}
+
+function formatTime(ts){
+  if(!ts) return "—";
+  const d = new Date(ts);
+  return d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+}
+
+// ---------- Overlay click outside ----------
+document.getElementById("overlay").addEventListener("click", (e)=>{
+  if(e.target.id === "overlay") closeModal();
+});
+
+init();
+
+// ---------- PWA: registrar service worker ----------
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {
+      // silencioso: app funciona normal mesmo sem SW (ex: aberto via file://)
+    });
+  });
+}
+
+</script>
+</body>
+</html>
